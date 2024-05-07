@@ -20,6 +20,7 @@ interface UseFetchState<T> {
   isLoading: boolean;
   error: Error | undefined;
   data: T;
+  refetch : () => void
 }
 
 export type {

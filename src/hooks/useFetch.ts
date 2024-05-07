@@ -77,10 +77,19 @@ function useFetch<T>({
     };
   }, [httpRequest]);
 
+  const refetch = () => {
+    if (abortControllerRef.current) {
+      abortControllerRef.current.abort();
+    }
+    abortControllerRef.current = new AbortController();
+    httpRequest(abortControllerRef.current.signal);
+  };
+
   return {
     isLoading: state.isLoading,
     error: state.error,
     data: state.data,
+    refetch,
   };
 }
 

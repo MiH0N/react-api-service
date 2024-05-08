@@ -13,13 +13,15 @@ type ApiStatusReducerProps<T> = (state: ServiceOptionProps<T>, action: Action<T>
 
 interface UseFetchParams<T> {
   apiHandler: (signal: AbortSignal) => Promise<{ data: T }>;
-  initialDataType: T;
+  initialDataType?: T;
+  key: string 
+  cacheTime?: number
 }
 
 interface UseFetchState<T> {
   isLoading: boolean;
   error: Error | undefined;
-  data: T;
+  data: T | undefined;
   refetch : () => void
 }
 

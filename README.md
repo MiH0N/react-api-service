@@ -1,55 +1,90 @@
-# useFetch Hook Documentation
+# `useFetch` Hook with `httpRequest` Function: Focused on Caching
 
-## Overview
+This document provides a comprehensive overview of the `useFetch` hook, with a special focus on its caching capabilities. The `useFetch` hook is designed for asynchronous data fetching in React applications, offering a powerful tool for data fetching with built-in caching and error handling features.
 
-The `useFetch` hook is a custom React hook designed to simplify the process of making API calls within a React application. It leverages the power of React's `useReducer` and `useEffect` hooks to manage the state of API requests, including loading, success, and error states. This hook is particularly useful for fetching data from an API and managing the UI state based on the API call's outcome.
+## Overview of `useFetch` Hook
 
-## Features
+The `useFetch` hook is a custom hook that simplifies the process of fetching data in React applications. It leverages the `httpRequest` function to perform the actual data fetching, caching, and error handling. The hook is designed to be flexible and reusable, allowing developers to easily fetch data with minimal boilerplate code.
 
-- **Automatic Loading State Management**: The hook automatically manages the loading state of the API call, allowing you to easily display loading indicators in your UI.
-- **Error Handling**: It provides a straightforward way to handle errors from API calls, enabling you to display error messages to the user.
-- **Abortable Requests**: The hook supports aborting ongoing API requests, which is useful for preventing memory leaks and unnecessary network activity.
-- **Refetching**: It includes a `refetch` function that allows you to easily re-execute the API call.
+### Caching Mechanism
 
-## Usage
+The core feature of the `useFetch` hook is its caching mechanism. This mechanism is designed to store fetched data, significantly reducing the number of network requests by serving cached data when available and valid.
 
-To use the `useFetch` hook, you need to pass an object with the following properties:
+- **Cache Validation**: The hook checks if the data for a given key is already cached and if the cache is still valid (based on a specified `cacheTime`). If the cache is valid, it immediately resolves the promise with the cached data, avoiding unnecessary network requests.
+- **Cache Update**: Upon successful fetching of data, the hook updates the cache with the new data and its timestamp. This ensures that subsequent requests for the same data can be served from the cache if it's still valid.
+- **Cache Key**: Each fetch operation is associated with a unique key. This key is used to identify and manage the cache for each specific data request.
 
-- `apiHandler`: A function that performs the API call. This function should accept an `AbortSignal` as its argument and return a promise that resolves with the API response.
-- `initialDataType`: The initial data type for the API response. This is used to initialize the state of the hook.
+### Additional Features
 
-## Example
+While the caching mechanism is the primary focus, the `useFetch` hook also includes several other features to enhance data fetching:
+
+- **Abort Signal Support**: It accepts an `AbortSignal` as an argument, allowing the caller to abort the fetch operation if needed. This is particularly useful for cancelling ongoing requests when a component unmounts or when a new request is initiated.
+- **Error Handling**: The hook includes error handling to manage any errors that occur during the fetch operation. It distinguishes between a fetch being aborted (which is a normal operation and not considered an error) and other types of errors, dispatching the appropriate action to update the state accordingly.
+- **State Management**: Before initiating the fetch operation, it dispatches a "pending" action to update the state to indicate that a fetch operation is in progress. Once the data is fetched successfully, it dispatches a "resolved" action with the fetched data. If an error occurs, it dispatches a "rejected" action with the error.
+
+## Example Usage of `useFetch` Hook
+
+Below is an example of how to use the `useFetch` hook in a React component to fetch a list of todos from a mock API and display them. The example also includes error handling and a button to manually trigger a refetch.
 
 ```typescript
+// Import the useFetch hook
 import useFetch from './hooks/useFetch';
 
-function MyComponent() {
- const { isLoading, data, error, refetch } = useFetch({
-    apiHandler: async (signal) => {
-      const response = await fetch('https://api.example.com/data', { signal });
-      if (!response.ok) {
-        throw new Error('Network response was not ok');
-      }
-      return response.json();
-    },
-    initialDataType: [], // Assuming the API returns an array
+// Define the type for the data you expect to receive
+type Todo = {
+ id: number;
+ title: string;
+ completed: boolean;
+};
+
+// Define the fetchData function
+const fetchData = async (signal: AbortSignal) => {
+ const response = await fetch('https://jsonplaceholder.typicode.com/todos', { signal });
+ const data: Todo[] = await response.json();
+ return { data };
+};
+
+// Your component
+function TodoList() {
+ // Use the useFetch hook
+ const { isLoading, data, error, refetch } = useFetch<Todo[]>({
+      apiHandler: fetchData,
+      initialDataType: [], // Initial data type for the fetched data
+      key: 'todos', // Unique key for caching
+      cacheTime: 10000, // Cache time in milliseconds
  });
 
- if (isLoading) return <div>Loading...</div>;
- if (error) return <div>Error: {error.message}</div>;
+ if (isLoading) {
+      return <div>Loading...</div>;
+ }
+
+ if (error) {
+      return <div>Error: {error.message}</div>;
+ }
 
  return (
-    <div>
-      <ul>
-        {data.map((item, index) => (
-          <li key={index}>{item}</li>
-        ))}
-      </ul>
-      <button onClick={refetch}>Refetch Data</button>
-    </div>
+      <div>
+        <button onClick={() => refetch()}>Refetch</button>
+        <ul>
+          {data.map((todo) => (
+            <li key={todo.id}>{todo.title}</li>
+          ))}
+        </ul>
+      </div>
  );
 }
+
+export default TodoList;
 ```
+
+### Explanation:
+
+- **Import and Setup**: Import the `useFetch` hook and define the `fetchData` function. This function fetches a list of todos from a mock API.
+- **Component Definition**: Define a `TodoList` component that uses the `useFetch` hook to fetch and display a list of todos.
+- **Hook Usage**: Use the `useFetch` hook within the `TodoList` component, passing the `fetchData` function, an initial data type, a unique key for caching, and a cache time.
+- **Rendering**: Based on the state of the fetch operation (`isLoading`, `error`, and `data`), render the appropriate UI. If data is fetched successfully, display the list of todos. Include a button to manually trigger a refetch of the data.
+
+This example demonstrates how to use the `useFetch` hook to fetch data, handle loading and error states, and implement a manual refetch mechanism, with a special emphasis on its caching capabilities.
 
 ## Dependencies
 
@@ -64,4 +99,4 @@ function MyComponent() {
 
 ## Conclusion
 
-The `useFetch` hook provides a powerful and flexible way to manage API calls in React applications. By abstracting away the complexities of managing loading states, error handling, and abortable requests, it allows developers to focus on building the UI and handling the data.
+The `useFetch` hook, with its robust caching mechanism, provides a powerful and flexible way to manage API calls in React applications. By abstracting away the complexities of managing loading states, error handling, and abortable requests, it allows developers to focus on building the UI and handling the data, while also benefiting from the performance improvements offered by caching.
